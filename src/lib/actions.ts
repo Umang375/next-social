@@ -2,6 +2,7 @@
 
 import { auth } from "@clerk/nextjs/server"
 import prisma from "./client"
+import { z } from "zod";
 
 export const switchFollow = async (userId : string) =>{
     const {userId : currentUserId} = auth();
@@ -144,5 +145,50 @@ export const declineFollowRequest = async(userId:string) =>{
     } catch (error) {
         console.log(error)
         throw new Error("Something went wrong!");
+    }
+}
+
+export const updateProfile = async(
+    prevState:{success:boolean, error:boolean},
+    payload:{formData : FormData, cover:string})=>{
+
+    const {formData, cover} = payload;    
+    const fields = Object.fromEntries(formData);
+    // so no null values are sent to the server. only the fields that are filled in.
+    const filteredFields = Object.fromEntries(Object.entries(fields).filter(([_, value]) => value!== ''));
+
+    const Profile = z.object({
+        cover: z.string().optional(),
+        name: z.string().max(60).optional(),
+        surname: z.string().max(60).optional(),
+        description: z.string().max(255).optional(),
+        city: z.string().max(60).optional(),
+        school: z.string().max(60).optional(),
+        work: z.string().max(60).optional(),
+        website: z.string().max(60).optional(),
+    })
+
+    const validatedProfile = Profile.safeParse({cover, ...filteredFields});
+    if(!validatedProfile.success){
+        console.log(validatedProfile.error.flatten().fieldErrors)
+        return {success:false, error:true};
+    }
+
+    const {userId} = auth();
+    if(!userId){
+        throw new Error("User is not authenticated");
+    }
+
+    try {
+        await prisma.user.update({
+            where:{
+                id : userId
+            },
+            data:validatedProfile.data
+        })
+        return {success:true, error:false};
+    } catch (err) {
+        console.log(err);
+        return {success:false, error:true};
     }
 }
