@@ -51,7 +51,7 @@ const AddPost = () => {
         {/* POST OPTIONS */}
         <div className="flex items-center gap-4 mt-4 text-gray-400 flex-wrap">
           <CldUploadWidget
-            uploadPreset="social"
+            uploadPreset="social-media"
             onSuccess={(result, { widget }) => {
               setImg(result.info);
               widget.close();
